@@ -1,0 +1,6 @@
+id,name,email,department,salary,is_active
+1,Alice Smith,alice@example.com,Engineering,95000,true
+2,Bob Jones,bob@example.com,Marketing,78000,true
+3,Charlie Brown,charlie@example.com,Engineering,105000,false
+4,Diana Prince,diana@example.com,Product,115000,true
+5,Evan Wright,evan@example.com,Sales,62000,true

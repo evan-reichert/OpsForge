@@ -1,0 +1,8 @@
+# Requirements to run this program
+---
+fastapi
+pandas
+postgresql
+openai
+bootstrap
+node
