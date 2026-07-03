@@ -20,3 +20,18 @@
 .nav-link:hover {
     font-weight: 600;
 }
+
+.navbar {
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.nav-tabs {
+    margin-bottom: 0;
+    border-bottom: none;
+}
+
+.nav-tabs .nav-link {
+    margin-bottom: calc(-1 * var(--bs-border-width));
+}
