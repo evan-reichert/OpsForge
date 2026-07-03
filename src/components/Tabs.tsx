@@ -20,6 +20,12 @@ function Tabs({ activeTab, onTabChange }: TabsProps) {
                 </div>
                 <div className="nav nav-tabs" role="tablist">
                     <button 
+                        className={`nav-link ${activeTab === 'home' ? 'active' : ''}`}
+                        onClick={() => onTabChange('home')}
+                    >
+                        Home
+                    </button>
+                    <button 
                         className={`nav-link ${activeTab === 'upload' ? 'active' : ''}`}
                         onClick={() => onTabChange('upload')}
                     >

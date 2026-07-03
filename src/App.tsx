@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import './App.css'
 import Tabs from './components/Tabs'
+import Home from './components/Home'
 import About from './components/About'
 import Past from './components/Past'
 import Upload from './components/Upload'
 
 
 function App() {
-  const [activeTab, setActiveTab] = useState('upload')
+  const [activeTab, setActiveTab] = useState('home')
   const rootRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     // Add loaded class shortly after mount to trigger entrance animations
@@ -28,6 +29,8 @@ function App() {
         }
         setActiveTab(tab)
       }} />
+
+      {activeTab === 'home' && <Home onJumpToUpload={() => setActiveTab('upload')} />}
 
       {activeTab === 'upload' && <Upload />}
 
