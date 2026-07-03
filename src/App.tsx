@@ -1,15 +1,24 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import './App.css'
 import Tabs from './components/Tabs'
 import About from './components/About'
+import Past from './components/Past'
 import BarChart from './components/BarChart'
 
 function App() {
   const [activeTab, setActiveTab] = useState('upload')
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    // Add loaded class shortly after mount to trigger entrance animations
+    if (rootRef.current) {
+      setTimeout(() => rootRef.current && rootRef.current.classList.add('has-loaded'), 40)
+    }
+  }, [])
   const [reportText, setReportText] = useState('')
   const [issueCounts, setIssueCounts] = useState<{ issue: string; count: number }[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [openedReportId, setOpenedReportId] = useState<string | null>(null)
 
   async function handleGenerateReport() {
     setLoading(true)
@@ -38,11 +47,18 @@ function App() {
   }
 
   return (
-    <>
-      <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
+    <div ref={rootRef} className="app-root">
+      <Tabs activeTab={activeTab} onTabChange={(tab) => {
+        // trigger tab switch animation by briefly resetting loaded state
+        if (rootRef.current) {
+          rootRef.current.classList.remove('has-loaded')
+          setTimeout(() => rootRef.current && rootRef.current.classList.add('has-loaded'), 30)
+        }
+        setActiveTab(tab)
+      }} />
 
       {activeTab === 'upload' && (
-        <section className="report-area">
+        <section className="report-area animate-on-load" style={{ ['--order' as any]: 1 }}>
           <div className="report-header">
             <div>
               <h1>Generated Report</h1>
@@ -58,7 +74,7 @@ function App() {
           {error && <div className="error-message">{error}</div>}
 
           <div className="report-grid">
-            <div className="report-box">
+            <div className="report-box animate-on-load" style={{ ['--order' as any]: 2 }}>
               <h2>Report Output</h2>
               <div className="report-content">
                 {reportText ? (
@@ -69,7 +85,7 @@ function App() {
               </div>
             </div>
 
-            <div className="chart-box">
+            <div className="chart-box animate-on-load" style={{ ['--order' as any]: 3 }}>
               <h2>Issue Counts</h2>
               <BarChart data={issueCounts} />
             </div>
@@ -78,23 +94,27 @@ function App() {
       )}
 
       {activeTab === 'reports' && (
-        <section className="report-area">
-          <div className="report-header">
-            <div>
-              <h1>Past Reports</h1>
-              <p>Past reports will appear here once backend storage integration is available.</p>
-            </div>
-          </div>
-
-          <div className="report-box">
-            <p>Coming soon: historical issue reports, export options, and summary insights.</p>
-          </div>
+        <section className="report-area animate-on-load" style={{ ['--order' as any]: 1 }}>
+          <Past onOpenReport={setOpenedReportId} />
         </section>
       )}
 
-      {activeTab === 'about' && <About />}
-    </>
-  )
+      {openedReportId && (
+        <div className="dashboard-overlay" onClick={() => setOpenedReportId(null)}>
+          <div className="dashboard-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="dashboard-close" onClick={() => setOpenedReportId(null)}>×</button>
+            <h2>Dashboard: Report {openedReportId}</h2>
+            <div className="dashboard-content">
+              <p>Old dashboard data would load here for report <strong>{openedReportId}</strong></p>
+              <p>Backend integration would fetch historical data, metrics, and details for this report.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+        {activeTab === 'about' && <About />}
+      </div>
+    )
 }
 
 export default App

@@ -12,7 +12,7 @@ function Tabs({ activeTab, onTabChange }: TabsProps) {
     
     // Render the navigation bar with tabs
     return (
-        <nav className="navbar navbar-expand-lg navbar-light bg-light border-bottom">
+        <nav className="navbar navbar-expand-lg navbar-light bg-light border-bottom animate-on-load" style={{ ['--order' as any]: 0 }}>
             <div className="container-fluid">
                 <div className="d-flex align-items-center gap-2">
                     <img src={logo} alt="OpsForge Logo" style={{ height: '40px', width: '40px' }} />

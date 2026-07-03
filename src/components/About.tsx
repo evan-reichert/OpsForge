@@ -1,28 +1,30 @@
 // Import dependencies
 import aboutImage from '../assets/about1.png'
 import aboutImage2 from '../assets/about2.png'
+import headshot from '../assets/headshot.png'
 import './About.css'
 
 // Create a function for the about tab
 function About() {
   return (
     <section className="about-section">
-      <div className="about-header">
+      <div className="about-header animate-on-load" style={{ ['--order' as any]: 1 }}>
         <h1>OpsForge</h1>
         <p className="about-description">
           Less digging. More doing.
         </p>
       </div>
 
+
       <div className="about-grid">
-        <article className="about-bubble about-bubble--with-image">
+        <article className="about-bubble about-bubble--with-image animate-on-load" style={{ ['--order' as any]: 2 }}>
           <div className="bubble-text">
             Welcome to OpsForge: IT Support has never been easier.
           </div>
           <img src={aboutImage} alt="About asset" className="bubble-image" />
         </article>
 
-        <article className="about-bubble about-bubble--with-image">
+        <article className="about-bubble about-bubble--with-image animate-on-load" style={{ ['--order' as any]: 3 }}>
           <div className="bubble-text">
             OpsForge scans CSV exports from any helpdesk and generates the report your ops team needs 
             -- bottlenecks, repeat issues, and the workflows worth automating.
@@ -37,28 +39,39 @@ function About() {
         <p className="how-intro">Upload a CSV from any helpdesk, OpsForge parses and categorizes issues, then generates actionable reports.</p>
 
         <div className="how-grid">
-          <div className="how-step">
+          <div className="how-step animate-on-load" style={{ ['--order' as any]: 4 }}>
             <div className="how-step-icon">📤</div>
             <h3>Upload</h3>
             <p>Drop your CSV export and let OpsForge ingest the raw data.</p>
           </div>
 
-          <div className="how-step">
+          <div className="how-step animate-on-load" style={{ ['--order' as any]: 5 }}>
             <div className="how-step-icon">🔎</div>
             <h3>Analyze</h3>
             <p>Pandas and parsing logic clean and normalize the rows for processing.</p>
           </div>
 
-          <div className="how-step">
+          <div className="how-step animate-on-load" style={{ ['--order' as any]: 6 }}>
             <div className="how-step-icon">🧠</div>
             <h3>Classify</h3>
             <p>AI assigns issue categories and groups similar tickets automatically.</p>
           </div>
 
-          <div className="how-step">
+          <div className="how-step animate-on-load" style={{ ['--order' as any]: 7 }}>
             <div className="how-step-icon">📈</div>
             <h3>Report</h3>
             <p>Generate clear reports with top issues, trends, and automation opportunities.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="behind-backend animate-on-load" style={{ ['--order' as any]: 8 }}>
+        <h2>Behind OpsForge</h2>
+        <div className="backend-card">
+          <img src={headshot} alt="Evan Reichert" className="backend-headshot" />
+          <div className="backend-info">
+            <h3>Evan Reichert</h3>
+            <p>Computer Science Student who is passionate about programming and building tools that make IT teams' lives easier.</p>
           </div>
         </div>
       </section>
