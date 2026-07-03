@@ -12,18 +12,43 @@ export default function Home({ onJumpToUpload }: HomeProps) {
       <div className="container home-page-inner">
         <div className="row gx-5 home-home-row">
           <div className="col-12 col-lg-6 home-hero animate-on-load" style={{ ['--order' as any]: 2 }}>
-            <div className="home-hero-title">
-              <img src={logo} alt="OpsForge logo" className="home-logo" />
-              <div className="home-heading-text">
-                <h1>
-                  <span className="home-heading-small">Welcome to</span>
-                  <span className="home-heading-large">OpsForge</span>
-                </h1>
+            <div>
+              <div className="home-hero-title">
+                <img src={logo} alt="OpsForge logo" className="home-logo" />
+                <div className="home-heading-text">
+                  <h1>
+                    <span className="home-heading-small">Welcome to</span>
+                    <span className="home-heading-large">OpsForge</span>
+                  </h1>
+                </div>
               </div>
+              <p className="home-intro">
+                Your centralized assistant for helpdesk analytics, report generation, and faster operational decisions.
+              </p>
             </div>
-            <p className="home-intro">
-              Your centralized assistant for helpdesk analytics, report generation, and faster operational decisions.
-            </p>
+            <div className="home-feature-grid animate-on-load" style={{ ['--order' as any]: 4 }}>
+              <article className="home-feature-card">
+                <span className="home-feature-emoji">⚡</span>
+                <div>
+                  <h3>AI Diagnostics</h3>
+                  <p>Find operational issues automatically.</p>
+                </div>
+              </article>
+              <article className="home-feature-card">
+                <span className="home-feature-emoji">📊</span>
+                <div>
+                  <h3>Smart Reports</h3>
+                  <p>Interactive charts & executive summaries.</p>
+                </div>
+              </article>
+              <article className="home-feature-card">
+                <span className="home-feature-emoji">🔒</span>
+                <div>
+                  <h3>Secure Processing</h3>
+                  <p>Your CSV stays private.</p>
+                </div>
+              </article>
+            </div>
           </div>
 
           <div className="col-12 col-lg-6 home-action-wrapper animate-on-load" style={{ ['--order' as any]: 3 }}>

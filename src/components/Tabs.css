@@ -27,11 +27,38 @@
     padding-bottom: 0;
 }
 
+/* Navigation tabs */
 .nav-tabs {
     margin-bottom: 0;
     border-bottom: none;
+    gap: 0.5rem;
 }
 
+/* Inactive tabs */
 .nav-tabs .nav-link {
-    margin-bottom: calc(-1 * var(--bs-border-width));
+    color: #64748b;
+    border: none;
+    border-radius: 12px;
+    margin-bottom: 0;
+    padding: 0.65rem 1.1rem;
+    transition: all 180ms ease;
+}
+
+/* Hover */
+.nav-tabs .nav-link:hover {
+    color: #ff6a00;
+    background: rgba(255, 106, 0, 0.08);
+}
+
+/* Active tab */
+.nav-tabs .nav-link.active {
+    color: #ff6a00;
+    background: rgba(255, 106, 0, 0.12);
+    border: none;
+    font-weight: 600;
+}
+
+/* Remove Bootstrap focus ring */
+.nav-tabs .nav-link:focus {
+    box-shadow: none;
 }
