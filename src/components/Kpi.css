@@ -1,0 +1,73 @@
+/* KPI cards — modern, minimal, Apple-inspired */
+
+.kpi-grid { padding: 0.5rem 0; }
+
+.kpi-card {
+  position: relative;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  transition: transform 200ms cubic-bezier(.2,.9,.2,1), box-shadow 200ms ease;
+}
+
+.kpi-card::before {
+  /* subtle glossy highlight across top */
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30%;
+  background: linear-gradient(160deg, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0) 100%);
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  filter: blur(8px);
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.kpi-icon {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ff8a00, #ff6a00);
+  box-shadow: 0 6px 14px rgba(79, 70, 229, 0.06);
+}
+
+.kpi-body { padding-left: 60px; }
+
+.kpi-label {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.kpi-value {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #0f1724;
+  margin-bottom: 0.35rem;
+}
+
+.kpi-desc {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.kpi-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.14);
+}
+
+@media (max-width: 767px) {
+  .kpi-body { padding-left: 0; text-align: center; }
+  .kpi-icon { left: calc(50% - 20px); top: 12px; }
+}

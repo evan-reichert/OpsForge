@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import './Upload.css'
 import BarChart from './BarChart'
+import KpiGrid from './KpiGrid'
 
 type IssueCount = {
 	issue: string
@@ -37,11 +38,13 @@ function parseCsv(text: string): string[][] {
 	return rows
 }
 
-function summarizeCsv(rows: string[][]): { reportText: string; issueCounts: IssueCount[] } {
+function summarizeCsv(rows: string[][]): { reportText: string; issueCounts: IssueCount[]; totalRows: number; columns: number } {
 	if (rows.length < 2) {
 		return {
 			reportText: 'The uploaded CSV did not contain enough rows to generate a report.',
-			issueCounts: []
+			issueCounts: [],
+			totalRows: 0,
+			columns: rows[0]?.length ?? 0
 		}
 	}
 
@@ -89,7 +92,9 @@ function summarizeCsv(rows: string[][]): { reportText: string; issueCounts: Issu
 
 	return {
 		reportText: summaryLines.join('\n'),
-		issueCounts
+		issueCounts,
+		totalRows: total,
+		columns: rows[0].length
 	}
 }
 
@@ -98,6 +103,8 @@ export default function Upload() {
 	const [issueCounts, setIssueCounts] = useState<IssueCount[]>([])
 	const [selectedFileName, setSelectedFileName] = useState('')
 	const [selectedFile, setSelectedFile] = useState<File | null>(null)
+	const [totalRows, setTotalRows] = useState<number>(0)
+	const [numColumns, setNumColumns] = useState<number>(0)
 	const [loading, setLoading] = useState(false)
 	const [error, setError] = useState('')
 
@@ -123,9 +130,11 @@ export default function Upload() {
 			try {
 				const text = reader.result?.toString() ?? ''
 				const rows = parseCsv(text)
-				const { reportText: generatedText, issueCounts: generatedCounts } = summarizeCsv(rows)
+				const { reportText: generatedText, issueCounts: generatedCounts, totalRows: tr, columns: cols } = summarizeCsv(rows)
 				setReportText(generatedText)
 				setIssueCounts(generatedCounts)
+				setTotalRows(tr)
+				setNumColumns(cols)
 			} catch (err) {
 				setError('Unable to parse the uploaded CSV file. Please verify the file format and try again.')
 			} finally {
@@ -149,6 +158,25 @@ export default function Upload() {
 					</p>
 				</div>
 			</div>
+
+			{reportText && (
+				<div className="animate-on-load" style={{ ['--order' as any]: 4 }}>
+					{
+						(() => {
+							const totalIssues = issueCounts.reduce((s, it) => s + (it.count || 0), 0)
+							const health = totalRows > 0 ? Math.max(0, 100 - Math.round((totalIssues / totalRows) * 100)) : 100
+							return (
+								<KpiGrid metrics={{
+									operationalHealth: `${health}%`,
+									issuesFound: String(totalIssues),
+									rowsProcessed: totalRows.toLocaleString(),
+									columns: String(numColumns)
+								}} />
+							)
+						})()
+					}
+				</div>
+			)}
 
 			<div className="upload-card animate-on-load" style={{ ['--order' as any]: 2 }}>
 				<label className="file-label">
