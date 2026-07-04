@@ -9,6 +9,7 @@ import {
     CartesianGrid,
     ResponsiveContainer
 } from 'recharts';
+import './BarChart.css';
 
 type IssueCount = {
     issue: string;
@@ -23,15 +24,17 @@ function BarChartComponent({ data }: { data: IssueCount[] }) {
     const sortedData = [...data].sort((a, b) => b.count - a.count);
 
     return (
-        <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={sortedData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="issue" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(value: number) => [value, 'Count']} />
-                <Bar dataKey="count" fill="#4f46e5" radius={[6, 6, 0, 0]} />
-            </BarChart>
-        </ResponsiveContainer>
+        <div className="issue-bar-chart">
+            <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={sortedData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="issue" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip formatter={(value) => [value, 'Count']} />
+                    <Bar dataKey="count" fill="#4f46e5" radius={[6, 6, 0, 0]} />
+                </BarChart>
+            </ResponsiveContainer>
+        </div>
     );
 }
 

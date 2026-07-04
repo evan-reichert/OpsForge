@@ -1,0 +1,48 @@
+.issue-bar-chart {
+	width: 100%;
+}
+
+/* Animate bars rising from the baseline on each render */
+.issue-bar-chart .recharts-bar-rectangle path {
+	transform-box: fill-box;
+	transform-origin: center bottom;
+	animation: bar-rise 700ms cubic-bezier(0.22, 0.8, 0.3, 1) both;
+}
+
+/* Staggered start times for smoother visual sequence */
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(1) path { animation-delay: 30ms; }
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(2) path { animation-delay: 80ms; }
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(3) path { animation-delay: 130ms; }
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(4) path { animation-delay: 180ms; }
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(5) path { animation-delay: 230ms; }
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(6) path { animation-delay: 280ms; }
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(7) path { animation-delay: 330ms; }
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(8) path { animation-delay: 380ms; }
+
+/* Give each issue bar a different color (cycles by bar order) */
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(8n + 1) path { fill: #4f46e5 !important; }
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(8n + 2) path { fill: #0ea5e9 !important; }
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(8n + 3) path { fill: #14b8a6 !important; }
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(8n + 4) path { fill: #22c55e !important; }
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(8n + 5) path { fill: #f59e0b !important; }
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(8n + 6) path { fill: #f97316 !important; }
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(8n + 7) path { fill: #ef4444 !important; }
+.issue-bar-chart .recharts-bar-rectangle:nth-of-type(8n + 8) path { fill: #a855f7 !important; }
+
+@keyframes bar-rise {
+	from {
+		transform: scaleY(0.04);
+		opacity: 0.45;
+	}
+	to {
+		transform: scaleY(1);
+		opacity: 1;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.issue-bar-chart .recharts-bar-rectangle path {
+		animation: none;
+		transform: none;
+	}
+}
