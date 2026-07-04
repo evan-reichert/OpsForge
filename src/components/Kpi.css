@@ -1,6 +1,8 @@
-/* KPI cards — modern, minimal, Apple-inspired */
-
-.kpi-grid { padding: 0.5rem 0; }
+/* KPI cards — post upload */
+.kpi-grid {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+}
 
 .kpi-card {
   position: relative;
