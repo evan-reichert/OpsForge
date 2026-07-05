@@ -25,13 +25,20 @@ function BarChartComponent({ data }: { data: IssueCount[] }) {
 
     return (
         <div className="issue-bar-chart">
-            <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={sortedData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <ResponsiveContainer width="100%" height={420}>
+                <BarChart data={sortedData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="issue" tick={{ fontSize: 12 }} />
+                    <XAxis
+                        dataKey="issue"
+                        tick={{ fontSize: 11 }}
+                        interval={0}
+                        angle={-35}
+                        textAnchor="end"
+                        height={80}
+                    />
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip formatter={(value) => [value, 'Count']} />
-                    <Bar dataKey="count" fill="#4f46e5" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="count" fill="#4f46e5" radius={[6, 6, 0, 0]} minPointSize={4} />
                 </BarChart>
             </ResponsiveContainer>
         </div>

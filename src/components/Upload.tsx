@@ -8,99 +8,24 @@ type IssueCount = {
 	count: number
 }
 
-function parseCsv(text: string): string[][] {
-	const rows: string[][] = []
-	const lines = text.replace(/\r\n/g, '\n').split('\n')
-	for (const line of lines) {
-		if (!line.trim()) continue
-		const row: string[] = []
-		let current = ''
-		let inQuotes = false
-		for (let i = 0; i < line.length; i += 1) {
-			const char = line[i]
-			if (char === '"') {
-				if (inQuotes && line[i + 1] === '"') {
-					current += '"'
-					i += 1
-				} else {
-					inQuotes = !inQuotes
-				}
-			} else if (char === ',' && !inQuotes) {
-				row.push(current)
-				current = ''
-			} else {
-				current += char
-			}
-		}
-		row.push(current)
-		rows.push(row)
+type UploadResponse = {
+	metrics?: {
+		rows?: number
+		columns?: string[]
 	}
-	return rows
-}
-
-function summarizeCsv(rows: string[][]): { reportText: string; issueCounts: IssueCount[]; totalRows: number; columns: number } {
-	if (rows.length < 2) {
-		return {
-			reportText: 'The uploaded CSV did not contain enough rows to generate a report.',
-			issueCounts: [],
-			totalRows: 0,
-			columns: rows[0]?.length ?? 0
-		}
-	}
-
-	const header = rows[0].map((h) => h.trim().toLowerCase())
-	const categoryIndex = header.findIndex((col) => ['category', 'issue category', 'issue_type', 'issue type', 'type'].includes(col))
-	const summaryIndex = header.findIndex((col) => ['issue', 'summary', 'description', 'subject', 'ticket'].includes(col))
-
-	const counts = new Map<string, number>()
-	const keywordCategories = [
-		{ name: 'Login Issues', keywords: ['login', 'sign in', 'signin', 'credentials', 'password'] },
-		{ name: 'Performance', keywords: ['slow', 'lag', 'delay', 'performance', 'timeout'] },
-		{ name: 'Errors', keywords: ['error', 'fail', 'failure', 'exception', 'crash', 'bug'] },
-		{ name: 'Setup / Access', keywords: ['access', 'setup', 'install', 'permission', 'configure'] },
-		{ name: 'Network', keywords: ['network', 'wifi', 'connection', 'latency', 'vpn'] }
-	]
-
-	for (let i = 1; i < rows.length; i += 1) {
-		const row = rows[i]
-		let category = 'Other'
-		if (categoryIndex !== -1 && row[categoryIndex]) {
-			category = row[categoryIndex].trim() || 'Other'
-		} else if (summaryIndex !== -1 && row[summaryIndex]) {
-			const text = row[summaryIndex].toLowerCase()
-			const found = keywordCategories.find((group) => group.keywords.some((word) => text.includes(word)))
-			category = found?.name || 'Other'
-		} else {
-			const text = row.join(' ').toLowerCase()
-			const found = keywordCategories.find((group) => group.keywords.some((word) => text.includes(word)))
-			category = found?.name || 'Other'
-		}
-		counts.set(category, (counts.get(category) ?? 0) + 1)
-	}
-
-	const issueCounts: IssueCount[] = Array.from(counts.entries()).map(([issue, count]) => ({ issue, count }))
-	const total = rows.length - 1
-	const topCategories = issueCounts.sort((a, b) => b.count - a.count).slice(0, 3)
-	const summaryLines = [
-		`Processed ${total} CSV ${total === 1 ? 'row' : 'rows'} successfully.`,
-		`Detected ${issueCounts.length} issue category ${issueCounts.length === 1 ? 'type' : 'types'}.`,
-		'Top categories:'
-	]
-	for (const entry of topCategories) {
-		summaryLines.push(`- ${entry.issue}: ${entry.count}`)
-	}
-
-	return {
-		reportText: summaryLines.join('\n'),
-		issueCounts,
-		totalRows: total,
-		columns: rows[0].length
-	}
+	issue_counts?: IssueCount[]
+	report_text?: string
+	advice?: string
+	health_score?: number
+	health_label?: string
 }
 
 export default function Upload() {
 	const [reportText, setReportText] = useState('')
 	const [issueCounts, setIssueCounts] = useState<IssueCount[]>([])
+	const [adviceText, setAdviceText] = useState('')
+	const [healthScore, setHealthScore] = useState<number | null>(null)
+	const [healthLabel, setHealthLabel] = useState('')
 	const [selectedFileName, setSelectedFileName] = useState('')
 	const [selectedFile, setSelectedFile] = useState<File | null>(null)
 	const [totalRows, setTotalRows] = useState<number>(0)
@@ -115,9 +40,12 @@ export default function Upload() {
 		setError('')
 		setReportText('')
 		setIssueCounts([])
+		setAdviceText('')
+		setHealthScore(null)
+		setHealthLabel('')
 	}
 
-	function handleGenerateReport() {
+	async function handleGenerateReport() {
 		if (!selectedFile) {
 			setError('Please upload a CSV file before generating the report.')
 			return
@@ -125,27 +53,38 @@ export default function Upload() {
 
 		setLoading(true)
 		setError('')
-		const reader = new FileReader()
-		reader.onload = () => {
-			try {
-				const text = reader.result?.toString() ?? ''
-				const rows = parseCsv(text)
-				const { reportText: generatedText, issueCounts: generatedCounts, totalRows: tr, columns: cols } = summarizeCsv(rows)
-				setReportText(generatedText)
-				setIssueCounts(generatedCounts)
-				setTotalRows(tr)
-				setNumColumns(cols)
-			} catch (err) {
-				setError('Unable to parse the uploaded CSV file. Please verify the file format and try again.')
-			} finally {
-				setLoading(false)
+		try {
+			const formData = new FormData()
+			formData.append('file', selectedFile)
+
+			const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
+			const response = await fetch(`${apiBase}/upload`, {
+				method: 'POST',
+				body: formData
+			})
+
+			if (!response.ok) {
+				const errorPayload = await response.json().catch(() => null) as { detail?: string } | null
+				throw new Error(errorPayload?.detail ?? 'Backend could not process the CSV.')
 			}
-		}
-		reader.onerror = () => {
-			setError('Unable to read the uploaded file. Please try again.')
+
+			const payload = await response.json() as UploadResponse
+			setReportText(payload.report_text ?? 'Report generated.')
+			setIssueCounts(payload.issue_counts ?? [])
+			setAdviceText(payload.advice ?? 'No AI advice returned for this file.')
+			setTotalRows(payload.metrics?.rows ?? 0)
+			setNumColumns(payload.metrics?.columns?.length ?? 0)
+			setHealthScore(payload.health_score ?? null)
+			setHealthLabel(payload.health_label ?? '')
+		} catch (err) {
+			if (err instanceof TypeError) {
+				setError(`Could not reach backend at ${import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'}. Start FastAPI and retry.`)
+			} else {
+				setError(err instanceof Error ? err.message : 'Unable to generate report from backend.')
+			}
+		} finally {
 			setLoading(false)
 		}
-		reader.readAsText(selectedFile)
 	}
 
 	return (
@@ -154,7 +93,7 @@ export default function Upload() {
 				<div>
 					<h1 className="gradient-title">Generate Report</h1>
 					<p>
-						Upload your CSV to the box below, then press the blue button to produce both the report summary and the issue-count bar chart.
+						Upload your CSV to the box below, then press the blue button to produce the report summary, issue-count bar chart, and AI-generated advice.
 					</p>
 				</div>
 			</div>
@@ -164,10 +103,11 @@ export default function Upload() {
 					{
 						(() => {
 							const totalIssues = issueCounts.reduce((s, it) => s + (it.count || 0), 0)
-							const health = totalRows > 0 ? Math.max(0, 100 - Math.round((totalIssues / totalRows) * 100)) : 100
+							const displayScore = healthScore !== null ? healthScore : Math.max(0, 100 - Math.round((totalIssues / (totalRows || 1)) * 100))
 							return (
 								<KpiGrid metrics={{
-									operationalHealth: `${health}%`,
+									operationalHealth: `${displayScore}%`,
+									healthLabel: healthLabel || undefined,
 									issuesFound: String(totalIssues),
 									rowsProcessed: totalRows.toLocaleString(),
 									columns: String(numColumns)
@@ -179,12 +119,34 @@ export default function Upload() {
 			)}
 
 			<div className="upload-card animate-on-load" style={{ ['--order' as any]: 2 }}>
-				<label className="file-label">
-					<span>{selectedFileName || 'Choose a CSV file from your helpdesk export'}</span>
+				<label className={`file-label${selectedFileName ? ' file-label--selected' : ''}`}>
+					{selectedFileName ? (
+						<>
+							<svg className="file-label__icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<path d="M9 12l2 2 4-4" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+								<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+								<polyline points="14 2 14 8 20 8" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+							</svg>
+							<span className="file-label__text">{selectedFileName}</span>
+						</>
+					) : (
+						<>
+							<svg className="file-label__icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="#4f46e5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+								<polyline points="17 8 12 3 7 8" stroke="#4f46e5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+								<line x1="12" y1="3" x2="12" y2="15" stroke="#4f46e5" strokeWidth="2" strokeLinecap="round"/>
+							</svg>
+							<span className="file-label__text">
+								<strong>Drag &amp; drop</strong> your CSV here, or <span className="file-label__browse">click to browse</span>
+							</span>
+						</>
+					)}
 					<input type="file" accept=".csv" onChange={handleFileChange} />
 				</label>
 				<button className="generate-button" onClick={handleGenerateReport} disabled={loading}>
-					{loading ? 'Generating…' : 'Generate Report'}
+					{loading ? (
+						<span className="btn-spinner"><span /><span /><span /></span>
+					) : 'Generate Report'}
 				</button>
 			</div>
 
@@ -207,6 +169,20 @@ export default function Upload() {
 					<BarChart data={issueCounts} />
 				</div>
 			</div>
+
+			{adviceText && (
+				<div className="advice-bubble animate-on-load" style={{ ['--order' as any]: 4 }}>
+					<h2>AI Organizational Advice</h2>
+					<div className="advice-content">
+						{adviceText.split('\n').filter(l => l.trim()).map((line, index) => (
+							<div key={index} className="advice-card">
+								<span className="advice-card__bullet">→</span>
+								<p>{line.replace(/^[•→]\s*/, '')}</p>
+							</div>
+						))}
+					</div>
+				</div>
+			)}
 		</section>
 	)
 }

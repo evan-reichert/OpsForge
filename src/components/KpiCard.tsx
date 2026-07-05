@@ -1,19 +1,25 @@
-import React from 'react'
 import './Kpi.css'
+
+import type { ReactNode } from 'react'
 
 type KpiCardProps = {
   label: string
   value: string
   description?: string
+  statusClass?: string
+  icon?: ReactNode
+  iconClass?: string
 }
 
-export default function KpiCard({ label, value, description }: KpiCardProps) {
+export default function KpiCard({ label, value, description, statusClass, icon, iconClass }: KpiCardProps) {
   return (
-    <div className="kpi-card">
-      <div className="kpi-icon" aria-hidden="true">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#FF8A00"/>
-        </svg>
+    <div className={`kpi-card${statusClass ? ` ${statusClass}` : ''}`}>
+      <div className={`kpi-icon${iconClass ? ` ${iconClass}` : ''}`} aria-hidden="true">
+        {icon ?? (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2"/>
+          </svg>
+        )}
       </div>
 
       <div className="kpi-body">

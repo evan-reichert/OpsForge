@@ -12,6 +12,60 @@
   overflow: hidden;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
   transition: transform 200ms cubic-bezier(.2,.9,.2,1), box-shadow 200ms ease;
+  border-top: 3px solid transparent;
+}
+
+/* ── Icon colour variants ─────────────────────────── */
+
+/* Pulse line — teal/green for Operational Health */
+.kpi-icon--health {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  box-shadow: 0 6px 14px rgba(16, 185, 129, 0.28) !important;
+}
+
+/* Warning triangle — orange/red for Issues Found */
+.kpi-icon--issues {
+  background: linear-gradient(135deg, #f97316, #ef4444) !important;
+  box-shadow: 0 6px 14px rgba(249, 115, 22, 0.28) !important;
+}
+
+/* List rows — blue for Rows Processed */
+.kpi-icon--rows {
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+  box-shadow: 0 6px 14px rgba(59, 130, 246, 0.28) !important;
+}
+
+/* Grid — indigo/purple for Columns */
+.kpi-icon--columns {
+  background: linear-gradient(135deg, #8b5cf6, #4f46e5) !important;
+  box-shadow: 0 6px 14px rgba(139, 92, 246, 0.28) !important;
+}
+
+.kpi-card--healthy {
+  border-top-color: #22c55e;
+}
+
+.kpi-card--healthy .kpi-desc {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.kpi-card--fair {
+  border-top-color: #f59e0b;
+}
+
+.kpi-card--fair .kpi-desc {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.kpi-card--critical {
+  border-top-color: #ef4444;
+}
+
+.kpi-card--critical .kpi-desc {
+  color: #dc2626;
+  font-weight: 600;
 }
 
 .kpi-card::before {
@@ -34,17 +88,17 @@
   position: absolute;
   top: 14px;
   left: 14px;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #ff8a00, #ff6a00);
-  box-shadow: 0 6px 14px rgba(79, 70, 229, 0.06);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
 }
 
-.kpi-body { padding-left: 60px; }
+.kpi-body { padding-left: 62px; }
 
 .kpi-label {
   font-size: 0.85rem;
@@ -71,5 +125,5 @@
 
 @media (max-width: 767px) {
   .kpi-body { padding-left: 0; text-align: center; }
-  .kpi-icon { left: calc(50% - 20px); top: 12px; }
+  .kpi-icon { left: calc(50% - 21px); top: 12px; }
 }

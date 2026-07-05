@@ -1,8 +1,5 @@
-# Requirements to run this program
----
 fastapi
+uvicorn[standard]
 pandas
-postgresql
 openai
-bootstrap
-node
+python-multipart
