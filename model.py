@@ -11,6 +11,7 @@ Responsibilities:
 main.py imports and calls interpret_csv(), the single public entry point.
 """
 
+# Import dependencies
 import json
 import os
 from collections import Counter
@@ -33,16 +34,31 @@ def _heuristic_issue_counts(df: pd.DataFrame) -> list[dict]:
         -1,
     )
 
+    # OpsForge will look for keywords in the summary/description to classify tickets into categories
     keyword_groups = [
         ("Login Issues", ["login", "sign in", "signin", "credentials", "password"]),
+        ("Account Management", ["account", "locked", "unlock", "username", "profile", "deprovision", "provision"]),
+        ("Email / Messaging", ["email", "outlook", "exchange", "mailbox", "smtp", "teams", "slack", "message"]),
+        ("Security / Compliance", ["security", "phish", "malware", "virus", "breach", "mfa", "2fa", "compliance", "audit"]),
+        ("Hardware", ["laptop", "desktop", "monitor", "keyboard", "mouse", "dock", "battery", "device", "hardware"]),
+        ("Software / Application", ["application", "app", "software", "update", "patch", "version", "license", "plugin"]),
+        ("Database", ["database", "db", "sql", "query", "deadlock", "index", "replication", "schema"]),
+        ("API / Integration", ["api", "integration", "webhook", "endpoint", "token", "oauth", "sso", "connector"]),
+        ("Storage / Backup", ["storage", "disk", "backup", "restore", "retention", "filesystem", "capacity"]),
+        ("Printing", ["printer", "print", "toner", "paper jam", "spool", "scanner"]),
+        ("Billing / Subscription", ["billing", "invoice", "payment", "subscription", "renewal", "charge", "refund"]),
+        ("Reporting / Analytics", ["report", "dashboard", "analytics", "metric", "kpi", "export", "csv"]),
+        ("User Interface", ["ui", "ux", "button", "dropdown", "layout", "screen", "display", "visual"]),
+        ("Mobile", ["mobile", "ios", "android", "iphone", "ipad", "tablet", "app crash"]),
+        ("Data Quality", ["duplicate", "missing", "null", "incomplete", "invalid", "mismatch", "inconsistent"]),
         ("Performance", ["slow", "lag", "delay", "performance", "timeout"]),
         ("Errors", ["error", "fail", "failure", "exception", "crash", "bug"]),
         ("Setup / Access", ["access", "setup", "install", "permission", "configure"]),
         ("Network", ["network", "wifi", "connection", "latency", "vpn"]),
     ]
-
+    
     counts: Counter[str] = Counter()
-
+    # Loop through each row in the DataFrame and classify it into a category
     for values in df.astype(str).values.tolist():
         category = "Other"
         if category_idx >= 0 and category_idx < len(values) and values[category_idx].strip():

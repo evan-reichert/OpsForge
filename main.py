@@ -1,3 +1,4 @@
+# Import dependencies
 import os
 
 import pandas as pd
@@ -5,11 +6,14 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from model import interpret_csv
 
+# FastAPI app initialization
 app = FastAPI()
 
+# CORS configuration
 cors_origins_env = os.getenv("CORS_ALLOW_ORIGINS", "")
 cors_origins = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
 
+# Add CORS middleware to the FastAPI app
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
@@ -18,17 +22,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+# GET Endpoint for root path
 @app.get("/")
 def root():
     return {"message": "OpsForge backend is running"}
 
-
+# POST Endpoint for CSV file upload and analysis
 @app.post("/upload")
 async def upload_csv(file: UploadFile = File(...)):
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Please upload a valid CSV file.")
-
+    # Error handling for CSV parsing
     try:
         raw_df = pd.read_csv(file.file)
     except Exception as exc:
@@ -37,6 +41,7 @@ async def upload_csv(file: UploadFile = File(...)):
     if raw_df.empty:
         raise HTTPException(status_code=400, detail="CSV file has no rows.")
 
+    # Data Cleaning and Metrics Calculation
     duplicate_rows = int(raw_df.duplicated().sum())
     missing_values = int(raw_df.isnull().sum().sum())
 
@@ -68,6 +73,7 @@ async def upload_csv(file: UploadFile = File(...)):
             "standard_deviation": round(float(df[column].std()), 2),
         }
 
+    # Issue Detection
     issues = []
 
     if metrics["missing_values"] > 0:
@@ -112,6 +118,7 @@ async def upload_csv(file: UploadFile = File(...)):
                 "description": f"{len(outliers)} unusual values detected in '{column}'.",
             })
 
+    # Results call the interpret_csv function to generate report and advice
     result = interpret_csv(df, metrics)
     issue_counts = result["issue_counts"]
     report_text = result["report_text"]
