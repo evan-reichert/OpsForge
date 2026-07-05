@@ -18,6 +18,7 @@ OpsForge is a full-stack analytics dashboard designed for IT/operations datasets
 - 💬 **Organizational Advice** generated from dataset-specific trends
 - ❤️ **Operational Health Score** with qualitative labels (Critical → Excellent)
 - 🧮 **Metrics & data quality checks** (missing values, duplicates, outliers, numeric stats)
+- 🗄️ **PostgreSQL-backed report history** for reopening dashboards in the Past Reports tab
 
 ### Product direction (planned)
 - 🗂️ **Past Reports Tab with historical dashboards**
@@ -73,7 +74,10 @@ Create a `.env` file in the project root (or copy from `.env.example`) and set:
 OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=gpt-4o-mini
 VITE_API_BASE_URL=http://127.0.0.1:8000
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/opsforge
 ```
+
+> `DATABASE_URL` may also point to SQLite for local fallback, but PostgreSQL is recommended for persistent team usage.
 
 Start backend:
 
@@ -133,9 +137,3 @@ Frontend default URL: `http://localhost:5173`
 - [ ] **Past Reports history with dashboard replay**
 - [ ] Persistent storage for uploaded analyses
 - [ ] Trend comparison across reports/time windows
-
----
-
-## 📄 License
-
-Internal/Project-specific. Add a formal license file if this will be distributed publicly.

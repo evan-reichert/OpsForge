@@ -40,6 +40,7 @@
   opacity: 0.6;
 }
 
+/* Past tab grid layout */
 .past-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -59,6 +60,7 @@
   will-change: transform, box-shadow;
 }
 
+/* Past slot hover and focus effects */
 .past-slot:hover,
 .past-slot:focus {
   outline: none;
@@ -67,11 +69,13 @@
   border-color: rgba(79, 70, 229, 0.3);
 }
 
+/* Past slot active effect */
 .past-slot:active {
   transform: translateY(-6px) scale(1.02);
   box-shadow: 0 16px 32px rgba(79, 70, 229, 0.15);
 }
 
+/* Past slot title */
 .past-title {
   font-size: 1.05rem;
   font-weight: 600;
@@ -80,6 +84,7 @@
   line-height: 1.4;
 }
 
+/* Past slot metadata */
 .past-meta {
   font-size: 0.85rem;
   color: #718096;
@@ -91,16 +96,16 @@
   .past-window {
     padding: 1.5rem;
   }
-
+  /* Adjust the header size for smaller screens */
   .past-window h2 {
     font-size: 2rem;
     margin-bottom: 1.5rem;
   }
-
+  /* Adjust the grid layout for smaller screens */
   .past-grid {
     grid-template-columns: 1fr;
   }
-  
+  /* Adjust the past slot hover effect for smaller screens */
   .past-slot:hover {
     transform: translateY(-8px) scale(1.02);
   }

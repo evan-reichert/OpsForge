@@ -1,13 +1,22 @@
 # Import dependencies
 import os
+from datetime import datetime
 
 import pandas as pd
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+from database import ReportRecord, create_tables, get_db
 from model import interpret_csv
 
 # FastAPI app initialization
 app = FastAPI()
+
+
+@app.on_event("startup")
+def on_startup() -> None:
+    create_tables()
 
 # CORS configuration
 cors_origins_env = os.getenv("CORS_ALLOW_ORIGINS", "")
@@ -27,9 +36,43 @@ app.add_middleware(
 def root():
     return {"message": "OpsForge backend is running"}
 
+
+@app.get("/reports")
+def list_reports(db: Session = Depends(get_db)):
+    reports = db.query(ReportRecord).order_by(ReportRecord.created_at.desc()).all()
+    return [
+        {
+            "id": report.id,
+            "title": report.report_title,
+            "filename": report.filename,
+            "created_at": report.created_at.isoformat() if report.created_at else None,
+            "rows_processed": report.rows_processed,
+            "column_count": report.column_count,
+            "issue_total": report.issue_total,
+            "health_score": report.health_score,
+            "health_label": report.health_label,
+        }
+        for report in reports
+    ]
+
+
+@app.get("/reports/{report_id}")
+def get_report(report_id: int, db: Session = Depends(get_db)):
+    report = db.query(ReportRecord).filter(ReportRecord.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+
+    return {
+        "id": report.id,
+        "title": report.report_title,
+        "filename": report.filename,
+        "created_at": report.created_at.isoformat() if report.created_at else None,
+        **report.payload,
+    }
+
 # POST Endpoint for CSV file upload and analysis
 @app.post("/upload")
-async def upload_csv(file: UploadFile = File(...)):
+async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Please upload a valid CSV file.")
     # Error handling for CSV parsing
@@ -127,7 +170,7 @@ async def upload_csv(file: UploadFile = File(...)):
     health_label = result["health_label"]
     model_used = result["model_used"]
 
-    return {
+    response_payload = {
         "filename": file.filename,
         "metrics": metrics,
         "issues": issues,
@@ -138,6 +181,34 @@ async def upload_csv(file: UploadFile = File(...)):
         "health_label": health_label,
         "preview": df.head().to_dict(orient="records"),
         "model_used": model_used,
+    }
+
+    try:
+        total_issues = sum(int(item.get("count", 0)) for item in issue_counts)
+        created_on = datetime.utcnow().strftime("%Y-%m-%d")
+        report_title = f"{file.filename} — {created_on}"
+
+        report_record = ReportRecord(
+            filename=file.filename,
+            report_title=report_title,
+            rows_processed=int(metrics.get("rows", 0) or 0),
+            column_count=len(metrics.get("columns", [])),
+            issue_total=total_issues,
+            health_score=int(health_score or 0),
+            health_label=str(health_label or "Unknown"),
+            payload=response_payload,
+        )
+        db.add(report_record)
+        db.commit()
+        db.refresh(report_record)
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Unable to save report to database.") from exc
+
+    return {
+        **response_payload,
+        "report_id": report_record.id,
+        "created_at": report_record.created_at.isoformat() if report_record.created_at else None,
     }
 
 
