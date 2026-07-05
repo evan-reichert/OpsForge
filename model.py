@@ -142,23 +142,81 @@ def _build_report_text(issue_counts: list[dict], total_rows: int) -> str:
 
 
 def _build_fallback_advice(issue_counts: list[dict], metrics: dict) -> str:
-    """Generate rule-based organisational advice when the AI model is not available."""
-    top = issue_counts[:3]
-    top_names = ", ".join([item["issue"] for item in top]) if top else "No dominant category"
+    """Generate rule-based organisational advice when the AI model is unavailable or too generic."""
+    total_rows = max(1, int(metrics.get("rows", 0) or 0))
 
-    advice_lines = [
-        f"Primary problem areas: {top_names}.",
-        "Create a weekly triage for the top two categories and assign an owner for each.",
-        "Standardize ticket intake fields so category, severity, and root cause are always captured.",
-        "Track repeat incidents and publish a short monthly remediation summary.",
-    ]
+    def _action_for_category(category_name: str) -> str:
+        c = category_name.lower()
+        if any(k in c for k in ["login", "password", "auth", "credential", "access"]):
+            return "prioritize SSO and self-service password reset with MFA enforcement"
+        if any(k in c for k in ["error", "crash", "failure", "exception", "outage"]):
+            return "create a top-error runbook and assign engineering owners for permanent fixes"
+        if any(k in c for k in ["network", "vpn", "wifi", "latency", "connect"]):
+            return "review network telemetry by site and add alerting on packet loss/latency spikes"
+        if any(k in c for k in ["slow", "performance", "timeout", "lag"]):
+            return "set response-time SLOs and investigate the highest-latency services first"
+        if any(k in c for k in ["setup", "install", "permission", "onboard", "provision"]):
+            return "standardize onboarding checklists and automate role-based provisioning"
+        return "run a focused root-cause review and publish one corrective action per week"
 
-    if metrics.get("duplicate_rows", 0) > 0:
-        advice_lines.append("Add deduplication rules in the reporting export to reduce duplicate tickets.")
-    if metrics.get("missing_values", 0) > 0:
-        advice_lines.append("Enforce required fields in ticket forms to reduce missing values.")
+    advice_lines: list[str] = []
+    top = issue_counts[:4]
 
+    if top:
+        for item in top:
+            count = int(item.get("count", 0))
+            category = str(item.get("issue", "Other"))
+            pct = round((count / total_rows) * 100, 1)
+            action = _action_for_category(category)
+            advice_lines.append(
+                f"{category} accounts for {count} tickets ({pct}% of total) — {action}."
+            )
+    else:
+        advice_lines.append(
+            "No dominant issue category was detected — enforce category tagging in intake to improve targeting."
+        )
+
+    duplicate_rows = int(metrics.get("duplicate_rows", 0) or 0)
+    missing_values = int(metrics.get("missing_values", 0) or 0)
+    if duplicate_rows > 0:
+        dup_pct = round((duplicate_rows / total_rows) * 100, 1)
+        advice_lines.append(
+            f"Duplicate records are {duplicate_rows} rows ({dup_pct}%) — add deduplication rules before analytics exports."
+        )
+    if missing_values > 0:
+        advice_lines.append(
+            f"There are {missing_values} missing field values — make category, severity, and status required fields in ticket forms."
+        )
+
+    severity_summary = metrics.get("severity_distribution", {})
+    if isinstance(severity_summary, dict) and severity_summary:
+        top_sev = max(severity_summary.items(), key=lambda kv: kv[1])
+        advice_lines.append(
+            f"Most common severity is '{top_sev[0]}' ({top_sev[1]} tickets) — rebalance triage capacity to that queue."
+        )
+
+    # Keep response concise and consistent with UI
+    advice_lines = advice_lines[:8]
     return "\n".join(f"• {line}" for line in advice_lines)
+
+
+def _advice_is_too_generic(advice_lines: list[str], issue_counts: list[dict]) -> bool:
+    """Reject advice that does not reference concrete categories or dataset statistics."""
+    if not advice_lines:
+        return True
+
+    top_categories = [str(item.get("issue", "")).lower() for item in issue_counts[:6] if item.get("issue")]
+    specific_lines = 0
+    for line in advice_lines:
+        text = line.lower()
+        has_number = any(ch.isdigit() for ch in text) or "%" in text
+        has_category = any(cat and cat in text for cat in top_categories)
+        if has_number or has_category:
+            specific_lines += 1
+
+    # Require most lines to be tied to the current dataset
+    required_specific = max(2, (len(advice_lines) * 2) // 3)
+    return specific_lines < required_specific
 
 
 # ── Structured data summary (sent to the AI instead of raw rows) ──────────────
@@ -294,6 +352,8 @@ def _ai_interpretation(df: pd.DataFrame, metrics: dict) -> tuple[str, list[dict]
 
     heuristic_counts = _heuristic_issue_counts(df)
     summary = _build_data_summary(df, metrics, heuristic_counts)
+    # Enrich fallback path with AI summary context when available
+    metrics_for_fallback = {**metrics, "severity_distribution": summary.get("severity_distribution", {})}
 
     try:
         completion = client.chat.completions.create(
@@ -341,11 +401,10 @@ def _ai_interpretation(df: pd.DataFrame, metrics: dict) -> tuple[str, list[dict]
             for line in (advice if isinstance(advice, list) else [])
             if str(line).strip()
         ]
-        advice_text = (
-            "\n".join(f"• {line}" for line in advice_lines)
-            if advice_lines
-            else _build_fallback_advice(cleaned_categories, metrics)
-        )
+        if _advice_is_too_generic(advice_lines, cleaned_categories):
+            advice_text = _build_fallback_advice(cleaned_categories, metrics_for_fallback)
+        else:
+            advice_text = "\n".join(f"• {line}" for line in advice_lines)
 
         # Parse health score
         try:
