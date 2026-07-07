@@ -2,6 +2,9 @@
 import os
 from datetime import datetime
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import pandas as pd
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware

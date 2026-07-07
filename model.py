@@ -14,10 +14,120 @@ main.py imports and calls interpret_csv(), the single public entry point.
 # Import dependencies
 import json
 import os
+import sys
 from collections import Counter
+
+from dotenv import load_dotenv
+load_dotenv()
 
 import pandas as pd
 from openai import OpenAI
+
+
+def _find_text_column(df: pd.DataFrame) -> str | None:
+    """Return the best candidate text column for ticket-level severity inference."""
+    for candidate in ["description", "summary", "issue", "subject", "ticket", "notes", "comment", "details", "problem"]:
+        matched = next((c for c in df.columns if c.lower() == candidate), None)
+        if matched:
+            return matched
+    return None
+
+
+def _explicit_severity_distribution(df: pd.DataFrame) -> dict[str, int]:
+    """Return severity distribution only when explicitly present in CSV columns."""
+    for candidate in ["severity", "priority", "sev", "pri", "urgency", "impact"]:
+        matched = next((c for c in df.columns if c.lower() == candidate), None)
+        if matched:
+            counts = Counter()
+            for raw in df[matched].astype(str).fillna("").tolist():
+                value = raw.strip().lower()
+                if not value:
+                    continue
+                if any(tag in value for tag in ["critical", "sev1", "p1", "blocker"]):
+                    counts["Critical"] += 1
+                elif any(tag in value for tag in ["high", "sev2", "p2", "major"]):
+                    counts["High"] += 1
+                elif any(tag in value for tag in ["medium", "med", "sev3", "p3", "moderate"]):
+                    counts["Medium"] += 1
+                elif any(tag in value for tag in ["low", "minor", "sev4", "p4"]):
+                    counts["Low"] += 1
+                else:
+                    counts["Medium"] += 1
+            return dict(counts)
+    return {}
+
+
+def _infer_severity_label(text: str) -> str:
+    """Infer ticket severity from free-text description alone."""
+    t = (text or "").lower()
+
+    critical_terms = {
+        "sev1", "p1", "critical", "outage", "system down", "production down", "data breach",
+        "breach", "ransomware", "malware outbreak", "unauthorized access", "cannot access",
+        "all users", "company-wide", "site down", "service unavailable", "hard down",
+    }
+    high_terms = {
+        "sev2", "p2", "urgent", "major", "high priority", "blocked", "blocking",
+        "payment failed", "database locked", "deadlock", "degraded", "timeout",
+        "escalated", "security incident", "cannot login", "vpn down", "email down",
+    }
+    medium_terms = {
+        "sev3", "p3", "intermittent", "slow", "lag", "delay", "warning", "retry",
+        "reopen", "inconsistent", "partial failure", "degraded performance", "workaround",
+    }
+    low_terms = {
+        "sev4", "p4", "minor", "cosmetic", "typo", "ui", "enhancement", "feature request",
+        "how to", "question", "training", "documentation", "request", "informational",
+    }
+
+    if any(term in t for term in critical_terms):
+        return "Critical"
+    if any(term in t for term in high_terms):
+        return "High"
+    if any(term in t for term in medium_terms):
+        return "Medium"
+    if any(term in t for term in low_terms):
+        return "Low"
+    return "Medium"
+
+
+def _infer_severity_distribution(df: pd.DataFrame) -> dict[str, int]:
+    """
+    Build severity distribution.
+    Priority order:
+      1) Explicit severity/priority-like column if present.
+      2) Free-text description inference when explicit severity is absent.
+    """
+    for candidate in ["severity", "priority", "sev", "pri", "urgency", "impact"]:
+        matched = next((c for c in df.columns if c.lower() == candidate), None)
+        if matched:
+            counts = Counter()
+            for raw in df[matched].astype(str).fillna("").tolist():
+                value = raw.strip().lower()
+                if not value:
+                    continue
+                if any(tag in value for tag in ["critical", "sev1", "p1", "blocker"]):
+                    counts["Critical"] += 1
+                elif any(tag in value for tag in ["high", "sev2", "p2", "major"]):
+                    counts["High"] += 1
+                elif any(tag in value for tag in ["medium", "med", "sev3", "p3", "moderate"]):
+                    counts["Medium"] += 1
+                elif any(tag in value for tag in ["low", "minor", "sev4", "p4"]):
+                    counts["Low"] += 1
+                else:
+                    counts["Medium"] += 1
+            if counts:
+                return dict(counts)
+
+    text_col = _find_text_column(df)
+    if not text_col:
+        return {}
+
+    counts = Counter()
+    for val in df[text_col].astype(str).fillna("").tolist():
+        label = _infer_severity_label(val)
+        counts[label] += 1
+    return dict(counts)
 
 
 # ── Heuristic categorisation ──────────────────────────────────────────────────
@@ -119,6 +229,30 @@ def _heuristic_health(issue_counts: list[dict], metrics: dict) -> tuple[int, str
             score -= min(20, round(weight * 60))
         elif any(kw in name for kw in warning_keywords):
             score -= min(10, round(weight * 30))
+
+    # Severity-weighted penalties (works even without explicit severity columns via text inference)
+    severity_dist = metrics.get("severity_distribution", {})
+    if isinstance(severity_dist, dict) and severity_dist:
+        critical_count = int(severity_dist.get("Critical", 0) or 0)
+        high_count = int(severity_dist.get("High", 0) or 0)
+        medium_count = int(severity_dist.get("Medium", 0) or 0)
+        low_count = int(severity_dist.get("Low", 0) or 0)
+
+        severity_weighted = (critical_count * 4.0) + (high_count * 2.2) + (medium_count * 1.0) + (low_count * 0.35)
+        severity_ratio = severity_weighted / max(total_rows, 1)
+        score -= min(55, round(severity_ratio * 18))
+
+        critical_share = critical_count / max(total_rows, 1)
+        high_share = high_count / max(total_rows, 1)
+        if critical_share >= 0.30:
+            score -= 20
+        elif critical_share >= 0.18:
+            score -= 12
+
+        if high_share >= 0.45:
+            score -= 12
+        elif high_share >= 0.30:
+            score -= 7
 
     # Category diversity — many distinct broken things signals scattered, unaddressed issues
     num_categories = len(issue_counts)
@@ -254,11 +388,7 @@ def _build_data_summary(df: pd.DataFrame, metrics: dict, issue_counts: list[dict
     ]
 
     # Locate the most descriptive text column for keyword extraction
-    text_col = None
-    for candidate in ["description", "summary", "issue", "subject", "ticket", "notes", "comment", "details"]:
-        if candidate in [c.lower() for c in df.columns]:
-            text_col = next(c for c in df.columns if c.lower() == candidate)
-            break
+    text_col = _find_text_column(df)
 
     # Top 30 ticket keywords (stop-word filtered)
     top_keywords: list[str] = []
@@ -276,13 +406,9 @@ def _build_data_summary(df: pd.DataFrame, metrics: dict, issue_counts: list[dict
                     word_counter[word] += 1
         top_keywords = [w for w, _ in word_counter.most_common(30)]
 
-    # Severity / priority distribution
-    severity_dist: dict = {}
-    for candidate in ["severity", "priority", "sev", "pri", "urgency", "impact"]:
-        matched = next((c for c in df.columns if c.lower() == candidate), None)
-        if matched:
-            severity_dist = df[matched].astype(str).value_counts().to_dict()
-            break
+    # Severity distribution only when explicitly provided by the CSV.
+    # If empty, AI is expected to infer severity from sample ticket descriptions.
+    severity_dist: dict = _explicit_severity_distribution(df)
 
     # Status / resolution distribution
     status_dist: dict = {}
@@ -318,6 +444,7 @@ def _build_data_summary(df: pd.DataFrame, metrics: dict, issue_counts: list[dict
         "category_breakdown": category_breakdown,
         "top_keywords_in_tickets": top_keywords,
         "severity_distribution": severity_dist,
+        "severity_inference_required": not bool(severity_dist),
         "status_distribution": status_dist,
         "numeric_stats": numeric_highlights,
         "missing_values": metrics.get("missing_values", 0),
@@ -337,6 +464,9 @@ _SYSTEM_PROMPT = (
     "0-24 = Critical, 25-44 = At Risk, 45-64 = Fair, 65-79 = Good, 80-100 = Excellent. "
     "The score MUST reflect the actual severity distribution, category concentration, "
     "volume of critical/error tickets, unresolved status rates, and data quality. "
+    "If severity/risk columns are missing, infer severity directly from ticket descriptions "
+    "and language in sample tickets (e.g., outages, breaches, all-users-blocked, failed payments, etc.). "
+    "Do not assume severity is unknown just because the CSV has no risk/severity column. "
     "Two different datasets MUST receive different scores if their distributions differ. "
     "A dataset dominated by 'Errors' or 'Crashes' should score lower than one with "
     "'Setup' or 'How-To' questions. Never default to the same score across calls.\n"
@@ -361,10 +491,12 @@ def _ai_interpretation(df: pd.DataFrame, metrics: dict) -> tuple[str, list[dict]
     """
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
+        print("[OpsForge] No OPENAI_API_KEY found — using heuristic fallback.", file=sys.stderr)
         return None
 
     client = OpenAI(api_key=api_key)
     model_name = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    print(f"[OpsForge] Calling {model_name} with {len(df)} rows...", file=sys.stderr)
 
     heuristic_counts = _heuristic_issue_counts(df)
     summary = _build_data_summary(df, metrics, heuristic_counts)
@@ -410,17 +542,17 @@ def _ai_interpretation(df: pd.DataFrame, metrics: dict) -> tuple[str, list[dict]
             or _build_report_text(cleaned_categories, len(df))
         )
 
-        # Parse advice
+        # Parse advice — trust the model directly; only fall back if completely empty
         advice = parsed.get("advice", [])
         advice_lines = [
             str(line).strip()
             for line in (advice if isinstance(advice, list) else [])
             if str(line).strip()
         ]
-        if _advice_is_too_generic(advice_lines, cleaned_categories):
-            advice_text = _build_fallback_advice(cleaned_categories, metrics_for_fallback)
-        else:
+        if advice_lines:
             advice_text = "\n".join(f"• {line}" for line in advice_lines)
+        else:
+            advice_text = _build_fallback_advice(cleaned_categories, metrics_for_fallback)
 
         # Parse health score
         try:
@@ -436,7 +568,8 @@ def _ai_interpretation(df: pd.DataFrame, metrics: dict) -> tuple[str, list[dict]
 
         return report_summary, cleaned_categories, advice_text, health_score, health_label
 
-    except Exception:
+    except Exception as exc:
+        print(f"[OpsForge] AI interpretation failed: {exc}", file=sys.stderr)
         return None
 
 
@@ -455,10 +588,12 @@ def interpret_csv(df: pd.DataFrame, metrics: dict) -> dict:
         report_text, issue_counts, advice_text, health_score, health_label = ai_result
         model_used = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     else:
+        # Fallback remains deterministic when model is unavailable.
+        metrics_for_scoring = {**metrics, "severity_distribution": _infer_severity_distribution(df)}
         issue_counts = _heuristic_issue_counts(df)
         report_text = _build_report_text(issue_counts, len(df))
-        advice_text = _build_fallback_advice(issue_counts, metrics)
-        health_score, health_label = _heuristic_health(issue_counts, metrics)
+        advice_text = _build_fallback_advice(issue_counts, metrics_for_scoring)
+        health_score, health_label = _heuristic_health(issue_counts, metrics_for_scoring)
         model_used = "heuristic-fallback"
 
     return {
