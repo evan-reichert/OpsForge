@@ -73,7 +73,8 @@
 .home-heading-large {
   font-size: clamp(3.8rem, 8vw, 6.4rem);
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.22;
+  padding-bottom: 0.08em;
 }
 
 .home-intro {
@@ -112,9 +113,27 @@
   box-shadow: 0 18px 34px rgba(15, 23, 42, 0.15);
 }
 
-.home-feature-emoji {
-  font-size: 1.9rem;
-  line-height: 1;
+.home-feature-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+}
+
+.home-feature-icon--diagnostics {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+}
+
+.home-feature-icon--reports {
+  background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+}
+
+.home-feature-icon--secure {
+  background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
 }
 
 .home-feature-card h3 {

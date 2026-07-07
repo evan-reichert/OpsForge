@@ -73,8 +73,11 @@ def get_report(report_id: int, db: Session = Depends(get_db)):
 # POST Endpoint for CSV file upload and analysis
 @app.post("/upload")
 async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    allowed_types = {"text/csv", "application/csv", "application/vnd.ms-excel", "text/plain"}
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Please upload a valid CSV file.")
+    if file.content_type and file.content_type.lower() not in allowed_types:
+        raise HTTPException(status_code=400, detail="Only CSV file uploads are allowed.")
     # Error handling for CSV parsing
     try:
         raw_df = pd.read_csv(file.file)

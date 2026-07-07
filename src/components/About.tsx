@@ -6,6 +6,40 @@ import './About.css'
 
 // Create a function for the about tab
 function About() {
+  const uploadIcon = (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 4v11" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      <path d="M8 8l4-4 4 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 20h16" stroke="white" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+
+  const analyzeIcon = (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="6" stroke="white" strokeWidth="2" />
+      <path d="M20 20l-4.35-4.35" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      <path d="M11 8v6" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      <path d="M8 11h6" stroke="white" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+
+  const classifyIcon = (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M8 8h8" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      <path d="M8 12h5" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      <path d="M8 16h7" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      <path d="M5 5h14v14H5z" stroke="white" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  )
+
+  const reportIcon = (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 19h14" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      <path d="M7 16l3-3 3 2 4-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M17 9h3v3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+
   return (
     <section className="about-section">
       <div className="about-header animate-on-load" style={{ ['--order' as any]: 1 }}>
@@ -40,25 +74,25 @@ function About() {
 
         <div className="how-grid">
           <div className="how-step animate-on-load" style={{ ['--order' as any]: 4 }}>
-            <div className="how-step-icon">📤</div>
+            <div className="how-step-icon how-step-icon--upload">{uploadIcon}</div>
             <h3>Upload</h3>
             <p>Drop your CSV export and let OpsForge ingest the raw data.</p>
           </div>
 
           <div className="how-step animate-on-load" style={{ ['--order' as any]: 5 }}>
-            <div className="how-step-icon">🔎</div>
+            <div className="how-step-icon how-step-icon--analyze">{analyzeIcon}</div>
             <h3>Analyze</h3>
             <p>Pandas and parsing logic clean and normalize the rows for processing.</p>
           </div>
 
           <div className="how-step animate-on-load" style={{ ['--order' as any]: 6 }}>
-            <div className="how-step-icon">🧠</div>
+            <div className="how-step-icon how-step-icon--classify">{classifyIcon}</div>
             <h3>Classify</h3>
             <p>AI assigns issue categories and groups similar tickets automatically.</p>
           </div>
 
           <div className="how-step animate-on-load" style={{ ['--order' as any]: 7 }}>
-            <div className="how-step-icon">📈</div>
+            <div className="how-step-icon how-step-icon--report">{reportIcon}</div>
             <h3>Report</h3>
             <p>Generate clear reports with top issues, trends, and automation opportunities.</p>
           </div>

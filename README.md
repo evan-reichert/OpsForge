@@ -74,10 +74,11 @@ Create a `.env` file in the project root (or copy from `.env.example`) and set:
 OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=gpt-4o-mini
 VITE_API_BASE_URL=http://127.0.0.1:8000
-DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/opsforge
+DATABASE_URI=postgresql+psycopg://postgres:postgres@localhost:5432/opsforge
 ```
 
-> `DATABASE_URL` may also point to SQLite for local fallback, but PostgreSQL is recommended for persistent team usage.
+> `DATABASE_URI` is the primary database setting. For local development only, if no DB env var is set, OpsForge falls back to `opsforge.db` (SQLite).
+> In deployment/production environments (including Vercel), `DATABASE_URI` is required.
 
 Start backend:
 
@@ -117,6 +118,22 @@ Frontend default URL: `http://localhost:5173`
 - If `OPENAI_API_KEY` is missing, OpsForge still works using heuristic fallback logic.
 - Ensure frontend and backend are both running.
 - CORS is configured for localhost/127.0.0.1 development origins.
+- Database env precedence is: `DATABASE_URI` → `DATABASE_URL`.
+- For Vercel, set `DATABASE_URI` in Project Settings → Environment Variables to your managed Postgres connection string.
+
+---
+
+## ▲ Deploying with Vercel (database)
+
+1. Provision a managed PostgreSQL database (for example: Vercel Postgres, Neon, Supabase, Railway, Render).
+2. In Vercel Project Settings, add:
+  - `DATABASE_URI` = your Postgres URI
+  - `OPENAI_API_KEY` (if using AI mode)
+3. Ensure `DATABASE_URI` uses one of these forms (both are supported):
+  - `postgresql+psycopg://...`
+  - `postgresql://...` (auto-normalized at runtime)
+
+OpsForge will auto-create the `reports` table on backend startup.
 
 ---
 
