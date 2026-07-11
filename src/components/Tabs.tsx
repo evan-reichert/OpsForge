@@ -5,11 +5,10 @@ import './Tabs.css';
 type TabsProps = {
     activeTab: string;
     onTabChange: (tab: string) => void;
-    onLogout: () => void;
 };
 
 // Define the Tabs component, containing the navigation bar with three tabs: Upload, Past Reports, and About
-function Tabs({ activeTab, onTabChange, onLogout }: TabsProps) {
+function Tabs({ activeTab, onTabChange }: TabsProps) {
     
     // Render the navigation bar with tabs
     return (
@@ -43,12 +42,6 @@ function Tabs({ activeTab, onTabChange, onLogout }: TabsProps) {
                         onClick={() => onTabChange('about')}
                     >
                         About
-                    </button>
-                    <button
-                        className="nav-link nav-link--logout"
-                        onClick={onLogout}
-                    >
-                        Logout
                     </button>
                 </div>
             </div>

@@ -20,11 +20,7 @@ type UploadResponse = {
 	health_label?: string
 }
 
-type UploadProps = {
-	authToken: string
-}
-
-export default function Upload({ authToken }: UploadProps) {
+export default function Upload() {
 	const [reportText, setReportText] = useState('')
 	const [issueCounts, setIssueCounts] = useState<IssueCount[]>([])
 	const [adviceText, setAdviceText] = useState('')
@@ -95,9 +91,6 @@ export default function Upload({ authToken }: UploadProps) {
 			const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
 			const response = await fetch(`${apiBase}/upload`, {
 				method: 'POST',
-				headers: {
-					Authorization: `Bearer ${authToken}`
-				},
 				body: formData
 			})
 

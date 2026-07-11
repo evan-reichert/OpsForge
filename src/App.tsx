@@ -5,7 +5,6 @@ import Home from './components/Home'
 import About from './components/About'
 import Past from './components/Past'
 import Upload from './components/Upload'
-import Auth from './components/Auth'
 import KpiGrid from './components/KpiGrid'
 import BarChart from './components/BarChart'
 
@@ -33,7 +32,6 @@ type StoredReport = {
 
 
 function App() {
-  const [authToken, setAuthToken] = useState(() => sessionStorage.getItem('opsforge_access_token') ?? '')
   const [activeTab, setActiveTab] = useState('home')
   const rootRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
@@ -60,11 +58,7 @@ function App() {
       setReportError('')
       try {
         const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
-        const response = await fetch(`${apiBase}/reports/${openedReportId}`, {
-          headers: {
-            Authorization: `Bearer ${authToken}`
-          }
-        })
+        const response = await fetch(`${apiBase}/reports/${openedReportId}`)
         if (!response.ok) {
           throw new Error('Unable to load selected report.')
         }
@@ -78,18 +72,7 @@ function App() {
     }
 
     loadReport()
-  }, [openedReportId, authToken])
-
-  if (!authToken) {
-    return (
-      <div ref={rootRef} className="app-root">
-        <Auth onAuthenticated={(token) => {
-          sessionStorage.setItem('opsforge_access_token', token)
-          setAuthToken(token)
-        }} />
-      </div>
-    )
-  }
+  }, [openedReportId])
 
   return (
     <div ref={rootRef} className="app-root">
@@ -100,20 +83,15 @@ function App() {
           setTimeout(() => rootRef.current && rootRef.current.classList.add('has-loaded'), 30)
         }
         setActiveTab(tab)
-      }} onLogout={() => {
-        sessionStorage.removeItem('opsforge_access_token')
-        setAuthToken('')
-        setActiveTab('home')
-        setOpenedReportId(null)
       }} />
 
       {activeTab === 'home' && <Home onJumpToUpload={() => setActiveTab('upload')} />}
 
-      {activeTab === 'upload' && <Upload authToken={authToken} />}
+      {activeTab === 'upload' && <Upload />}
 
       {activeTab === 'reports' && (
         <section className="report-area animate-on-load" style={{ ['--order' as any]: 1 }}>
-          <Past authToken={authToken} onOpenReport={setOpenedReportId} />
+          <Past onOpenReport={setOpenedReportId} />
         </section>
       )}
 

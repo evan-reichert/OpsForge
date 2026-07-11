@@ -24,6 +24,7 @@ MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", 10 * 1024 * 1024))   # 10 M
 MAX_CSV_ROWS     = int(os.getenv("MAX_CSV_ROWS", 5_000))                   # 5 000 rows
 RATE_LIMIT       = os.getenv("UPLOAD_RATE_LIMIT", "10/minute")             # per IP
 ACCESS_TOKEN     = os.getenv("ACCESS_TOKEN", "").strip()
+REQUIRE_AUTH     = os.getenv("REQUIRE_AUTH", "false").strip().lower() == "true"
 
 # Rate-limiter (keyed by client IP)
 limiter = Limiter(key_func=get_remote_address)
@@ -42,6 +43,13 @@ def on_startup() -> None:
 cors_origins_env = os.getenv("CORS_ALLOW_ORIGINS", "")
 cors_origins = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
 
+# Local dev fallback origins (used when CORS_ALLOW_ORIGINS is not set)
+if not cors_origins:
+    cors_origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
 # Add CORS middleware to the FastAPI app
 app.add_middleware(
     CORSMiddleware,
@@ -54,8 +62,12 @@ app.add_middleware(
 
 @app.middleware("http")
 async def require_access_token(request: Request, call_next):
+    # Never block browser preflight; CORS middleware must be allowed to answer OPTIONS.
+    if request.method.upper() == "OPTIONS":
+        return await call_next(request)
+
     protected = request.url.path.startswith("/upload") or request.url.path.startswith("/reports")
-    if protected:
+    if protected and REQUIRE_AUTH:
         # Never allow protected routes to run without a configured token.
         if not ACCESS_TOKEN:
             return JSONResponse(
