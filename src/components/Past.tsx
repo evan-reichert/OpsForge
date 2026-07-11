@@ -4,6 +4,7 @@ import './Past.css'
 
 // Define the props for the Past component, which includes an optional onOpenReport callback function
 type PastProps = {
+	authToken: string
 	onOpenReport?: (id: number) => void
 }
 
@@ -19,7 +20,7 @@ type ReportSummary = {
 }
 
 // Define the past component which will display a list of past reports and allow users to open them
-function Past({ onOpenReport }: PastProps) {
+function Past({ authToken, onOpenReport }: PastProps) {
 	const [hovered, setHovered] = useState<string | null>(null)
 	const [reports, setReports] = useState<ReportSummary[]>([])
 	const [loading, setLoading] = useState(true)
@@ -32,7 +33,11 @@ function Past({ onOpenReport }: PastProps) {
 			setError('')
 			try {
 				const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
-				const response = await fetch(`${apiBase}/reports`)
+				const response = await fetch(`${apiBase}/reports`, {
+					headers: {
+						Authorization: `Bearer ${authToken}`
+					}
+				})
 				if (!response.ok) {
 					throw new Error('Could not load past reports from backend.')
 				}
@@ -46,7 +51,7 @@ function Past({ onOpenReport }: PastProps) {
 		}
 
 		loadReports()
-	}, [])
+	}, [authToken])
 
 	function openReport(id: number) {
 		if (onOpenReport) onOpenReport(id)

@@ -58,7 +58,36 @@
     font-weight: 600;
 }
 
+.nav-tabs .nav-link--logout {
+    margin-left: auto;
+    color: #b91c1c;
+    background: rgba(239, 68, 68, 0.08);
+    font-weight: 600;
+}
+
+.nav-tabs .nav-link--logout:hover {
+    color: #991b1b;
+    background: rgba(239, 68, 68, 0.16);
+}
+
 /* Remove Bootstrap focus ring */
 .nav-tabs .nav-link:focus {
     box-shadow: none;
+}
+
+/* Wrap tabs onto a second line on narrow screens instead of overflowing */
+@media (max-width: 575px) {
+  .nav-tabs {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .nav-tabs .nav-link {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.85rem;
+  }
+
+    .nav-tabs .nav-link--logout {
+        margin-left: 0;
+    }
 }

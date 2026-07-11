@@ -349,6 +349,26 @@
   margin: 0 0 1rem;
 }
 
+@media (max-width: 640px) {
+  .report-area {
+    padding: 1rem;
+  }
+
+  .about-section {
+    padding: 1rem;
+  }
+
+  .dashboard-modal {
+    padding: 1.25rem;
+    border-radius: 1rem;
+    width: 96%;
+  }
+
+  .report-header--centered h1 {
+    font-size: 1.9rem;
+  }
+}
+
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }

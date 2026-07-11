@@ -1,20 +1,37 @@
 # Import dependencies
+import io
 import os
+import re
 from datetime import datetime
 
 from dotenv import load_dotenv
 load_dotenv()
 
 import pandas as pd
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from database import ReportRecord, create_tables, get_db
 from model import interpret_csv
 
+# Abuse-prevention constants (override via environment variables)
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", 10 * 1024 * 1024))   # 10 MB
+MAX_CSV_ROWS     = int(os.getenv("MAX_CSV_ROWS", 5_000))                   # 5 000 rows
+RATE_LIMIT       = os.getenv("UPLOAD_RATE_LIMIT", "10/minute")             # per IP
+ACCESS_TOKEN     = os.getenv("ACCESS_TOKEN", "").strip()
+
+# Rate-limiter (keyed by client IP)
+limiter = Limiter(key_func=get_remote_address)
+
 # FastAPI app initialization
 app = FastAPI()
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 @app.on_event("startup")
@@ -33,6 +50,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def require_access_token(request: Request, call_next):
+    protected = request.url.path.startswith("/upload") or request.url.path.startswith("/reports")
+    if protected:
+        # Never allow protected routes to run without a configured token.
+        if not ACCESS_TOKEN:
+            return JSONResponse(
+                status_code=503,
+                content={"detail": "Server auth is not configured. Set ACCESS_TOKEN."},
+            )
+
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized."})
+        submitted = auth_header[len("Bearer "):].strip()
+        if submitted != ACCESS_TOKEN:
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized."})
+    return await call_next(request)
 
 # GET Endpoint for root path
 @app.get("/")
@@ -75,20 +112,43 @@ def get_report(report_id: int, db: Session = Depends(get_db)):
 
 # POST Endpoint for CSV file upload and analysis
 @app.post("/upload")
-async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
+@limiter.limit(RATE_LIMIT)
+async def upload_csv(request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)):
     allowed_types = {"text/csv", "application/csv", "application/vnd.ms-excel", "text/plain"}
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Please upload a valid CSV file.")
     if file.content_type and file.content_type.lower() not in allowed_types:
         raise HTTPException(status_code=400, detail="Only CSV file uploads are allowed.")
+
+    # --- File-size guard (read into memory once, check before parsing) ---
+    raw_bytes = await file.read()
+    if len(raw_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Maximum allowed size is {MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
+        )
+
     # Error handling for CSV parsing
     try:
-        raw_df = pd.read_csv(file.file)
+        raw_df = pd.read_csv(io.BytesIO(raw_bytes))
     except Exception as exc:
         raise HTTPException(status_code=400, detail="Unable to parse CSV file.") from exc
 
     if raw_df.empty:
         raise HTTPException(status_code=400, detail="CSV file has no rows.")
+
+    # --- Filename sanitization (prevent path-traversal sequences being stored in the DB) ---
+    safe_filename = re.sub(r'[\x00-\x1f\/\\:*?"<>|]', '_', file.filename or 'upload.csv')
+    safe_filename = safe_filename.lstrip('. ')  # strip leading dots/spaces
+    safe_filename = safe_filename[:255] or 'upload.csv'
+
+    # --- Row-count guard (prevents huge AI token bills) ---
+    if len(raw_df) > MAX_CSV_ROWS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"CSV exceeds the {MAX_CSV_ROWS:,}-row limit ({len(raw_df):,} rows found). "
+                   "Please trim your dataset and re-upload.",
+        )
 
     # Data Cleaning and Metrics Calculation
     duplicate_rows = int(raw_df.duplicated().sum())
@@ -177,7 +237,7 @@ async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)
     model_used = result["model_used"]
 
     response_payload = {
-        "filename": file.filename,
+        "filename": safe_filename,
         "metrics": metrics,
         "issues": issues,
         "issue_counts": issue_counts,
@@ -192,10 +252,10 @@ async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)
     try:
         total_issues = sum(int(item.get("count", 0)) for item in issue_counts)
         created_on = datetime.utcnow().strftime("%Y-%m-%d")
-        report_title = f"{file.filename} — {created_on}"
+        report_title = f"{safe_filename} — {created_on}"
 
         report_record = ReportRecord(
-            filename=file.filename,
+            filename=safe_filename,
             report_title=report_title,
             rows_processed=int(metrics.get("rows", 0) or 0),
             column_count=len(metrics.get("columns", [])),

@@ -3,5 +3,7 @@ uvicorn[standard]
 pandas
 openai
 python-multipart
+python-dotenv
 sqlalchemy
 psycopg[binary]
+slowapi

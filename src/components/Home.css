@@ -209,6 +209,7 @@
 @media (max-width: 991px) {
   .home-page {
     min-height: auto;
+    height: auto;
     padding-top: 3rem;
     padding-bottom: 3rem;
   }
@@ -221,5 +222,29 @@
     position: static;
     width: 100%;
     margin-top: 2rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .home-heading-small {
+    font-size: clamp(1.3rem, 6vw, 1.9rem);
+  }
+
+  .home-heading-large {
+    font-size: clamp(2.4rem, 12vw, 4rem);
+  }
+
+  .home-logo {
+    width: 60px;
+    height: 60px;
+  }
+
+  /* Hide the arrow image on very small screens so it doesn't overlay the subtitle */
+  .home-action-emoji {
+    display: none;
+  }
+
+  .home-intro {
+    font-size: 1.05rem;
   }
 }

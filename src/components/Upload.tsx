@@ -20,7 +20,11 @@ type UploadResponse = {
 	health_label?: string
 }
 
-export default function Upload() {
+type UploadProps = {
+	authToken: string
+}
+
+export default function Upload({ authToken }: UploadProps) {
 	const [reportText, setReportText] = useState('')
 	const [issueCounts, setIssueCounts] = useState<IssueCount[]>([])
 	const [adviceText, setAdviceText] = useState('')
@@ -45,9 +49,40 @@ export default function Upload() {
 		setHealthLabel('')
 	}
 
+	// Client-side limits (mirrors backend guards for fast feedback)
+	const MAX_FILE_MB = 10
+	const MAX_ROWS = 5_000
+
 	async function handleGenerateReport() {
 		if (!selectedFile) {
 			setError('Please upload a CSV file before generating the report.')
+			return
+		}
+
+		// File-size pre-check
+		if (selectedFile.size > MAX_FILE_MB * 1024 * 1024) {
+			setError(`File is too large. Maximum allowed size is ${MAX_FILE_MB} MB.`)
+			return
+		}
+
+		// Row-count pre-check (count newlines as a fast heuristic)
+		const rowCheckResult = await new Promise<string | null>((resolve) => {
+			const reader = new FileReader()
+			reader.onload = (e) => {
+				const text = e.target?.result as string ?? ''
+				const lines = text.split('\n').filter(l => l.trim().length > 0)
+				const dataRows = lines.length - 1 // subtract header
+				if (dataRows > MAX_ROWS) {
+					resolve(`CSV has too many rows (${dataRows.toLocaleString()}). Maximum allowed is ${MAX_ROWS.toLocaleString()} rows.`)
+				} else {
+					resolve(null)
+				}
+			}
+			reader.onerror = () => resolve(null) // let backend handle it on error
+			reader.readAsText(selectedFile)
+		})
+		if (rowCheckResult) {
+			setError(rowCheckResult)
 			return
 		}
 
@@ -60,6 +95,9 @@ export default function Upload() {
 			const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
 			const response = await fetch(`${apiBase}/upload`, {
 				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${authToken}`
+				},
 				body: formData
 			})
 
