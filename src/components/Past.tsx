@@ -1,6 +1,7 @@
 // Import dependencies
 import { useEffect, useState } from 'react'
 import './Past.css'
+import { getClientKey } from '../utils/clientKey'
 
 // Define the props for the Past component, which includes an optional onOpenReport callback function
 type PastProps = {
@@ -32,7 +33,11 @@ function Past({ onOpenReport }: PastProps) {
 			setError('')
 			try {
 				const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
-				const response = await fetch(`${apiBase}/reports`)
+				const response = await fetch(`${apiBase}/reports`, {
+					headers: {
+						'X-Client-Key': getClientKey()
+					}
+				})
 				if (!response.ok) {
 					throw new Error('Could not load past reports from backend.')
 				}

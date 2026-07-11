@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import './Upload.css'
 import BarChart from './BarChart'
 import KpiGrid from './KpiGrid'
+import { getClientKey } from '../utils/clientKey'
 
 type IssueCount = {
 	issue: string
@@ -89,8 +90,12 @@ export default function Upload() {
 			formData.append('file', selectedFile)
 
 			const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
+			const clientKey = getClientKey()
 			const response = await fetch(`${apiBase}/upload`, {
 				method: 'POST',
+				headers: {
+					'X-Client-Key': clientKey
+				},
 				body: formData
 			})
 

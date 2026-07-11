@@ -7,6 +7,7 @@ import Past from './components/Past'
 import Upload from './components/Upload'
 import KpiGrid from './components/KpiGrid'
 import BarChart from './components/BarChart'
+import { getClientKey } from './utils/clientKey'
 
 
 type IssueCount = {
@@ -58,7 +59,11 @@ function App() {
       setReportError('')
       try {
         const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
-        const response = await fetch(`${apiBase}/reports/${openedReportId}`)
+        const response = await fetch(`${apiBase}/reports/${openedReportId}`, {
+          headers: {
+            'X-Client-Key': getClientKey()
+          }
+        })
         if (!response.ok) {
           throw new Error('Unable to load selected report.')
         }

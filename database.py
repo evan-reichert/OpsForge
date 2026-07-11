@@ -2,7 +2,7 @@
 import os
 from collections.abc import Generator
 
-from sqlalchemy import JSON, DateTime, Integer, String, create_engine, func
+from sqlalchemy import JSON, DateTime, Integer, String, create_engine, func, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 # Initialize database connection and session
@@ -56,11 +56,21 @@ class ReportRecord(Base):
     issue_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     health_score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     health_label: Mapped[str] = mapped_column(String(64), nullable=False, default="Unknown")
+    owner_key: Mapped[str] = mapped_column(String(128), nullable=False, default="unknown", index=True)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False)
 
 # Define utility functions for database operations
 def create_tables() -> None:
     Base.metadata.create_all(bind=engine)
+
+    # Lightweight migration: add owner_key column if table existed before this field was introduced.
+    inspector = inspect(engine)
+    if "reports" in inspector.get_table_names():
+        columns = {c["name"] for c in inspector.get_columns("reports")}
+        if "owner_key" not in columns:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN owner_key VARCHAR(128)"))
+                conn.execute(text("UPDATE reports SET owner_key = 'legacy-unscoped' WHERE owner_key IS NULL"))
 
 # Define a dependency to get a database session
 def get_db() -> Generator[Session, None, None]:

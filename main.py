@@ -83,6 +83,16 @@ async def require_access_token(request: Request, call_next):
             return JSONResponse(status_code=401, content={"detail": "Unauthorized."})
     return await call_next(request)
 
+
+def _get_client_key(request: Request) -> str:
+    """Return per-visitor key used to isolate report data between users."""
+    raw = (request.headers.get("X-Client-Key") or "").strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Missing client key header.")
+    if len(raw) > 128 or not re.fullmatch(r"[A-Za-z0-9._-]+", raw):
+        raise HTTPException(status_code=400, detail="Invalid client key header.")
+    return raw
+
 # GET Endpoint for root path
 @app.get("/")
 def root():
@@ -90,8 +100,14 @@ def root():
 
 
 @app.get("/reports")
-def list_reports(db: Session = Depends(get_db)):
-    reports = db.query(ReportRecord).order_by(ReportRecord.created_at.desc()).all()
+def list_reports(request: Request, db: Session = Depends(get_db)):
+    client_key = _get_client_key(request)
+    reports = (
+        db.query(ReportRecord)
+        .filter(ReportRecord.owner_key == client_key)
+        .order_by(ReportRecord.created_at.desc())
+        .all()
+    )
     return [
         {
             "id": report.id,
@@ -109,8 +125,13 @@ def list_reports(db: Session = Depends(get_db)):
 
 
 @app.get("/reports/{report_id}")
-def get_report(report_id: int, db: Session = Depends(get_db)):
-    report = db.query(ReportRecord).filter(ReportRecord.id == report_id).first()
+def get_report(report_id: int, request: Request, db: Session = Depends(get_db)):
+    client_key = _get_client_key(request)
+    report = (
+        db.query(ReportRecord)
+        .filter(ReportRecord.id == report_id, ReportRecord.owner_key == client_key)
+        .first()
+    )
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
 
@@ -126,6 +147,7 @@ def get_report(report_id: int, db: Session = Depends(get_db)):
 @app.post("/upload")
 @limiter.limit(RATE_LIMIT)
 async def upload_csv(request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    client_key = _get_client_key(request)
     allowed_types = {"text/csv", "application/csv", "application/vnd.ms-excel", "text/plain"}
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Please upload a valid CSV file.")
@@ -274,6 +296,7 @@ async def upload_csv(request: Request, file: UploadFile = File(...), db: Session
             issue_total=total_issues,
             health_score=int(health_score or 0),
             health_label=str(health_label or "Unknown"),
+            owner_key=client_key,
             payload=response_payload,
         )
         db.add(report_record)
