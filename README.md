@@ -1,4 +1,4 @@
-# OpsForge
+# ![Alt Text](https://opsforge-omega.vercel.app/logo-CVWYVNNH.png "Optional Title") OpsForge
 
 <p align="center">
 	<strong>AI-powered operations analytics dashboard</strong><br/>
