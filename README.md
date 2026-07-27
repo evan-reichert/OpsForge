@@ -1,4 +1,4 @@
-# ![OpsForge logo](/assets/logo.png "OpsForge Home Logo") OpsForge
+# ![OpsForge logo](src/assets/logo.png "OpsForge Home Logo") OpsForge
 
 <p align="center">
 	<strong>AI-powered operations analytics dashboard</strong><br/>
